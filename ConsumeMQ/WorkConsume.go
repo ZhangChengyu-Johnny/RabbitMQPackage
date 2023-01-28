@@ -9,6 +9,7 @@ import (
 
 type WorkConsumeMQ struct {
 	*basicConsume
+	Queues        map[string]struct{}
 	prefetchCount int // 直到返回ack，才能继续给prefetch_count条message，0表示RR
 	prefetchSize  int // 设置消费者未确认消息内存大小的上限，单位Byte，0表示没有下限
 }
@@ -22,6 +23,7 @@ func NewWorkConsumeMQ(prefetchCount, prefetchSize int) *WorkConsumeMQ {
 	}
 	return &WorkConsumeMQ{
 		basicConsume:  mq,
+		Queues:        make(map[string]struct{}),
 		prefetchCount: prefetchCount,
 		prefetchSize:  prefetchSize,
 	}
@@ -49,7 +51,7 @@ func (mq *WorkConsumeMQ) QueueDeclare(queueName string, durable, noWait bool, ar
 }
 
 /* 创建消费者消息管道 */
-func (mq *WorkConsumeMQ) WorkMessageChan(queueName string, noWait bool, args amqp.Table) (msgChan <-chan amqp.Delivery, err error) {
+func (mq *WorkConsumeMQ) DefaultChan(queueName string, noWait bool, args amqp.Table) (msgChan <-chan amqp.Delivery, err error) {
 	if _, ok := mq.Queues[queueName]; !ok {
 		err = errors.New("queue not exists")
 		mq.failOnError(err, "queue not exists")

@@ -26,7 +26,7 @@ func TestSubscriptionP(t *testing.T) {
 func TestSubscriptionC1(t *testing.T) {
 	c := ConsumeMQ.NewSubscriptionConsumeMQ("subscription-mode-exchange-test", 1, false, false, nil)
 
-	msgChan, err := c.SubscriptionMessageChan(false, nil)
+	msgChan, err := c.FanoutChan(false, nil)
 	if err != nil {
 		log.Println(err)
 		return
@@ -43,7 +43,7 @@ func TestSubscriptionC2(t *testing.T) {
 	var ackCounter, batchSize int = 0, 15
 	c := ConsumeMQ.NewSubscriptionConsumeMQ("subscription-mode-exchange-test", batchSize, false, false, nil)
 
-	msgChan, err := c.SubscriptionMessageChan(false, nil)
+	msgChan, err := c.FanoutChan(false, nil)
 	if err != nil {
 		log.Println(err)
 		return

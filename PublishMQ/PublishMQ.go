@@ -11,8 +11,7 @@ type basicPublish struct {
 	conn         *amqp.Connection
 	channel      *amqp.Channel
 	dns          string
-	ExchangeName string   // 每个生产者对应一个交换机
-	RoutingKeys  []string // 每个生产者可以发出不同的RoutingKeys
+	ExchangeName string // 每个生产者对应一个交换机
 	Role         string
 }
 
@@ -21,7 +20,6 @@ func newBasicPublishMQ(exchangeName, role string) *basicPublish {
 	mq := &basicPublish{
 		dns:          Config.MQDNS,
 		ExchangeName: exchangeName,
-		RoutingKeys:  make([]string, 0),
 		Role:         role,
 	}
 	// 建立TCP连接

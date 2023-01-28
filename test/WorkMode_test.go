@@ -46,12 +46,12 @@ func TestWorkC1(t *testing.T) {
 		return
 	}
 
-	msgChan1, err := c.WorkMessageChan(queueName1, false, nil)
+	msgChan1, err := c.DefaultChan(queueName1, false, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	msgChan2, err := c.WorkMessageChan(queueName2, false, nil)
+	msgChan2, err := c.DefaultChan(queueName2, false, nil)
 	if err != nil {
 		log.Println(err)
 		return
@@ -82,7 +82,7 @@ func TestWorkC2(t *testing.T) {
 		return
 	}
 
-	msgChan, err := c.WorkMessageChan(queueName, false, nil)
+	msgChan, err := c.DefaultChan(queueName, false, nil)
 	if err != nil {
 		log.Println(err)
 		return

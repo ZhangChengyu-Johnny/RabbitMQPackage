@@ -11,16 +11,14 @@ type basicConsume struct {
 	conn    *amqp.Connection
 	channel *amqp.Channel
 	dns     string
-	Queues  map[string]struct{}
 	Role    string
 }
 
 func newBasicConsumeMQ(role string) *basicConsume {
 	var err error
 	mq := &basicConsume{
-		dns:    Config.MQDNS,
-		Queues: make(map[string]struct{}),
-		Role:   role,
+		dns:  Config.MQDNS,
+		Role: role,
 	}
 	// 建立TCP连接
 	mq.conn, err = amqp.Dial(mq.dns)

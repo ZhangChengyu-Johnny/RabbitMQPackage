@@ -44,7 +44,7 @@ func TestConfirmC1(t *testing.T) {
 		return
 	}
 
-	msgChan, err := c.WorkMessageChan(queueName, false, nil)
+	msgChan, err := c.DefaultChan(queueName, false, nil)
 	if err != nil {
 		log.Println(err)
 		return
@@ -72,7 +72,7 @@ func TestConfirmC2(t *testing.T) {
 		return
 	}
 
-	msgChan, err := c.WorkMessageChan(queueName, false, nil)
+	msgChan, err := c.DefaultChan(queueName, false, nil)
 	if err != nil {
 		log.Println(err)
 		return

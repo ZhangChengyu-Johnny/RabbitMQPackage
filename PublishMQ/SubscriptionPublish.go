@@ -18,6 +18,7 @@ func NewSubscriptionPublishMQ(exchangeName string, durable, noWait bool, args am
 	}
 	// 发布订阅模式实例化生产者时需要声明交换机
 	mq.exchangeDeclare(durable, noWait, args)
+
 	return mq
 }
 

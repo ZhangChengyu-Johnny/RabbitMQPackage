@@ -36,7 +36,7 @@ func TestConfirmP(t *testing.T) {
 
 func TestConfirmC1(t *testing.T) {
 	queueName := "confirm-mode-test1"
-	c := ConsumeMQ.NewWorkConsumeMQ(1, 0)
+	c := ConsumeMQ.NewWorkConsumeMQ(1000, 0)
 
 	err := c.QueueDeclare(queueName, false, false, nil)
 	if err != nil {
@@ -50,16 +50,20 @@ func TestConfirmC1(t *testing.T) {
 		return
 	}
 
+	var ackCounter int
 	for msg := range msgChan {
+		ackCounter++
 		fmt.Println(string(msg.Body))
-		c.Ack(msg.DeliveryTag, false)
+		if ackCounter >= 100 {
+			c.Ack(msg.DeliveryTag, true)
+		}
 	}
 
 }
 
 func TestConfirmC2(t *testing.T) {
 	queueName := "confirm-mode-test1"
-	c := ConsumeMQ.NewWorkConsumeMQ(1, 0)
+	c := ConsumeMQ.NewWorkConsumeMQ(1000, 0)
 
 	err := c.QueueDeclare(queueName, false, false, nil)
 	if err != nil {
@@ -73,9 +77,13 @@ func TestConfirmC2(t *testing.T) {
 		return
 	}
 
+	var ackCounter int
 	for msg := range msgChan {
+		ackCounter++
 		fmt.Println(string(msg.Body))
-		c.Ack(msg.DeliveryTag, false)
+		if ackCounter >= 100 {
+			c.Ack(msg.DeliveryTag, true)
+		}
 	}
 
 }

@@ -44,7 +44,7 @@ func TestConfirmC1(t *testing.T) {
 		return
 	}
 
-	msgChan, err := c.WorkMessageChan("C1-A", queueName, false, nil)
+	msgChan, err := c.WorkMessageChan(queueName, false, nil)
 	if err != nil {
 		log.Println(err)
 		return
@@ -56,6 +56,7 @@ func TestConfirmC1(t *testing.T) {
 		fmt.Println(string(msg.Body))
 		if ackCounter >= 100 {
 			c.Ack(msg.DeliveryTag, true)
+			ackCounter = 0
 		}
 	}
 
@@ -71,7 +72,7 @@ func TestConfirmC2(t *testing.T) {
 		return
 	}
 
-	msgChan, err := c.WorkMessageChan("C1-B", queueName, false, nil)
+	msgChan, err := c.WorkMessageChan(queueName, false, nil)
 	if err != nil {
 		log.Println(err)
 		return
@@ -83,6 +84,7 @@ func TestConfirmC2(t *testing.T) {
 		fmt.Println(string(msg.Body))
 		if ackCounter >= 100 {
 			c.Ack(msg.DeliveryTag, true)
+			ackCounter = 0
 		}
 	}
 

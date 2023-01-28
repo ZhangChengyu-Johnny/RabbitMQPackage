@@ -37,7 +37,7 @@ func (mq *SubscriptionPublish) exchangeDeclare(durable, noWait bool, args amqp.T
 
 }
 
-func (mq *SubscriptionPublish) SubscriptionPublish(message string) error {
+func (mq *SubscriptionPublish) SubscriptionPublishMessage(message string) error {
 	if err := mq.channel.PublishWithContext(
 		context.Background(),
 		mq.ExchangeName, // 发到绑定的交换器

@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	uuid "github.com/satori/go.uuid"
 )
 
 type WorkConsumeMQ struct {
@@ -15,7 +16,10 @@ type WorkConsumeMQ struct {
 func NewWorkConsumeMQ(prefetchCount, prefetchSize int) *WorkConsumeMQ {
 	mq := newBasicConsumeMQ("work-consume")
 	// global默认false，只在本consume生效
-	mq.channel.Qos(prefetchCount, prefetchSize, false)
+	if err := mq.channel.Qos(prefetchCount, prefetchSize, false); err != nil {
+		mq.failOnError(err, "Qos failed.")
+		panic(err)
+	}
 	return &WorkConsumeMQ{
 		basicConsume:  mq,
 		prefetchCount: prefetchCount,
@@ -45,7 +49,7 @@ func (mq *WorkConsumeMQ) QueueDeclare(queueName string, durable, noWait bool, ar
 }
 
 /* 创建消费者消息管道 */
-func (mq *WorkConsumeMQ) WorkMessageChan(consumeName, queueName string, noWait bool, args amqp.Table) (msgChan <-chan amqp.Delivery, err error) {
+func (mq *WorkConsumeMQ) WorkMessageChan(queueName string, noWait bool, args amqp.Table) (msgChan <-chan amqp.Delivery, err error) {
 	if _, ok := mq.Queues[queueName]; !ok {
 		err = errors.New("queue not exists")
 		mq.failOnError(err, "queue not exists")
@@ -54,56 +58,17 @@ func (mq *WorkConsumeMQ) WorkMessageChan(consumeName, queueName string, noWait b
 
 	// 接收消息
 	msgChan, err = mq.channel.Consume(
-		queueName,   // 队列名称
-		consumeName, // 消费者名称
-		false,       // 自动应答
-		false,       // 独占
-		false,       // 开启后同一个connection不能传递消息
-		noWait,      // 消费队列是否阻塞(msgChan)
-		args,        // 其他参数
+		queueName,                     // 队列名称
+		mq.Role+uuid.NewV4().String(), // 消费者名称
+		false,                         // 自动应答
+		false,                         // 独占
+		false,                         // 开启后同一个connection不能传递消息
+		noWait,                        // 消费队列是否阻塞(msgChan)
+		args,                          // 其他参数
 	)
 	if err != nil {
 		mq.failOnError(err, "make message channel failed.")
 		return
 	}
 	return
-}
-
-/* 确认消息，MQ收到回复后才删除消息 */
-func (mq *WorkConsumeMQ) Ack(deliveryTag uint64, multiple bool) {
-	/*
-		deliveryTag: 信道的消息计数器
-		multiple: 是否批量确认
-
-		单条确认模式: 单次确认处理完成的消息
-		批量确认模式: 批量确认该消息及之前读出的所有消息
-	*/
-	mq.channel.Ack(deliveryTag, multiple)
-}
-
-/* 拒绝消息，包含批量功能 */
-func (mq *WorkConsumeMQ) Nack(deliveryTag uint64, multiple, requeue bool) {
-	/*
-		deliveryTag: 信道的消息计数器
-		multiple: 是否批量拒绝
-		requeue: 被拒绝的消息是否重回队列
-
-		单条拒绝模式: 单条拒绝消息
-		批量应答模式: 批量拒绝该消息及之前读出的所有消息
-		重新入队模式: 被拒绝的消息重新入队，再次分配给消费者
-		死信队列模式: 被拒绝的消息加入死信队列，不再重新分配
-	*/
-	mq.channel.Nack(deliveryTag, multiple, requeue)
-}
-
-/* 拒绝消息，仅支持单条拒绝模式 */
-func (mq *WorkConsumeMQ) Reject(deliveryTag uint64, requeue bool) {
-	/*
-		deliveryTag: 信道的消息计数器
-		requeue: 被拒绝的消息是否重回队列
-
-		重新入队模式: 被拒绝的消息重新入队，再次分配给消费者
-		死信队列模式: 被拒绝的消息加入死信队列，不再重新分配
-	*/
-	mq.channel.Reject(deliveryTag, requeue)
 }

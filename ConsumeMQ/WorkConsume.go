@@ -24,17 +24,17 @@ func NewWorkConsumeMQ(prefetchCount, prefetchSize int) *WorkConsumeMQ {
 }
 
 /* 为消费者创建队列 */
-func (mq *WorkConsumeMQ) QueueDeclare(queueName string, durable, autuDelete, exclusive, noWait bool, args amqp.Table) error {
+func (mq *WorkConsumeMQ) QueueDeclare(queueName string, durable, noWait bool, args amqp.Table) error {
 	if _, ok := mq.Queues[queueName]; ok {
 		return nil
 	}
 	if _, err := mq.channel.QueueDeclare(
-		queueName,  // 队列名称
-		durable,    // 队列持久化标记
-		autuDelete, // 自动删除
-		exclusive,  // 队列独占标记
-		noWait,     // 阻塞
-		args,       // 额外参数
+		queueName, // 队列名称
+		durable,   // 队列持久化标记
+		false,     // 自动删除
+		false,     // 队列独占标记
+		noWait,    // 阻塞
+		args,      // 额外参数
 	); err != nil {
 		mq.failOnError(err, "declare queue failed.")
 		return err
@@ -45,7 +45,7 @@ func (mq *WorkConsumeMQ) QueueDeclare(queueName string, durable, autuDelete, exc
 }
 
 /* 创建消费者消息管道 */
-func (mq *WorkConsumeMQ) WorkMessageChan(consumeName, queueName string, autoAck, exclusive, noLocal, noWait bool, args amqp.Table) (msgChan <-chan amqp.Delivery, err error) {
+func (mq *WorkConsumeMQ) WorkMessageChan(consumeName, queueName string, noWait bool, args amqp.Table) (msgChan <-chan amqp.Delivery, err error) {
 	if _, ok := mq.Queues[queueName]; !ok {
 		err = errors.New("queue not exists")
 		mq.failOnError(err, "queue not exists")
@@ -59,8 +59,8 @@ func (mq *WorkConsumeMQ) WorkMessageChan(consumeName, queueName string, autoAck,
 		false,       // 自动应答
 		false,       // 独占
 		false,       // 开启后同一个connection不能传递消息
-		false,       // 消费队列是否阻塞(msgChan)
-		nil,         // 其他参数
+		noWait,      // 消费队列是否阻塞(msgChan)
+		args,        // 其他参数
 	)
 	if err != nil {
 		mq.failOnError(err, "make message channel failed.")

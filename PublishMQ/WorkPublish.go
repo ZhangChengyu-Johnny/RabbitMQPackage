@@ -22,17 +22,18 @@ func NewWorkPublishMQ() *WorkPublishMQ {
 	}
 }
 
-func (mq *WorkPublishMQ) QueueDeclare(queueName string, durable, autuDelete, exclusive, noWait bool, args amqp.Table) error {
+/* 使用default交换机发布 */
+func (mq *WorkPublishMQ) QueueDeclare(queueName string, durable, noWait bool, args amqp.Table) error {
 	if _, ok := mq.Queues[queueName]; ok {
 		return nil
 	}
 	if _, err := mq.channel.QueueDeclare(
-		queueName,  // 队列名称
-		durable,    // 队列持久化标记
-		autuDelete, // 自动删除
-		exclusive,  // 队列独占标记
-		noWait,     // 阻塞
-		args,       // 额外参数
+		queueName, // 队列名称
+		durable,   // 队列持久化标记
+		false,     // 自动删除
+		false,     // 队列独占标记
+		noWait,    // 阻塞
+		args,      // 额外参数
 	); err != nil {
 		mq.failOnError(err, "declare queue failed.")
 		return err
@@ -42,7 +43,7 @@ func (mq *WorkPublishMQ) QueueDeclare(queueName string, durable, autuDelete, exc
 	return nil
 }
 
-func (mq *WorkPublishMQ) WorkPublishMessage(message, queueName string, mandatory, immediate bool) error {
+func (mq *WorkPublishMQ) WorkPublishMessage(message, queueName string) error {
 	if _, ok := mq.Queues[queueName]; !ok {
 		err := errors.New("queue not exists")
 		mq.failOnError(err, "queue not exists")
@@ -52,8 +53,8 @@ func (mq *WorkPublishMQ) WorkPublishMessage(message, queueName string, mandatory
 		context.Background(),
 		"",        // 交换器
 		queueName, // 路由
-		mandatory, // 开启后把无法找到符合路由的消息返回给生产者
-		immediate, // 开启后如果交换机发送的队列上都没有消费者，那么把消息返回给生产者
+		false,     // 开启后把无法找到符合路由的消息返回给生产者
+		false,     // 开启后如果交换机发送的队列上都没有消费者，那么把消息返回给生产者
 		amqp.Publishing{
 			ContentType:  "text/plain",          // 消息内容类型
 			DeliveryMode: 1,                     // 持久设置，1:临时消息；2:持久化

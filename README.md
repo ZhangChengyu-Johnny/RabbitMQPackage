@@ -1,1 +1,1 @@
-# RabbitMQPkg
+### Schema isolation for RabbitMQ

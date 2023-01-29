@@ -10,6 +10,7 @@ import (
 )
 
 // 工作模式中每个生产者绑定一个default类型的交换机，可以储存多个队列信息，根据队列名将消息发布到指定队列
+// 工作模式的生产者需要配置队列，所以不支持死信模式
 
 type workPublishMQ struct {
 	*basicPublish
@@ -18,7 +19,7 @@ type workPublishMQ struct {
 
 func NewWorkPublishMQ() *workPublishMQ {
 	return &workPublishMQ{
-		basicPublish: newBasicPublishMQ("", "work-publisher"),
+		basicPublish: newBasicPublishMQ("", "default-publisher"),
 		Queues:       make(map[string]struct{}),
 	}
 }
@@ -60,7 +61,7 @@ func (mq *workPublishMQ) DefaultPublish(message, queueName string) error {
 			DeliveryMode: 1,                     // 持久设置，1:临时消息；2:持久化
 			Priority:     0,                     // 消息优先级0~9
 			ReplyTo:      "",                    // address to reply(ex: RPC)
-			Expiration:   "",                    // 消息有效期
+			Expiration:   "",                    // 消息有效期，毫秒
 			MessageId:    uuid.NewV4().String(), // message identity
 			Timestamp:    time.Now(),            // 发送消息的时间
 			Type:         "",                    // 消息类型

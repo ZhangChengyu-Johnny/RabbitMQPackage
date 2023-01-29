@@ -74,7 +74,7 @@ func TestWorkC2(t *testing.T) {
 
 func TestWorkC3(t *testing.T) {
 	queueName := "work-mode-test2"
-	prefetchCount := 100
+	prefetchCount := 10
 	durable := false
 	noWait := false
 	ackCounter := 0
@@ -89,7 +89,7 @@ func TestWorkC3(t *testing.T) {
 		ackCounter++
 		log.Printf("%s get message: %s\n", queueName, string(m.Body))
 		time.Sleep(time.Millisecond * 100)
-		if ackCounter >= 100 {
+		if ackCounter >= 10 {
 			ackCounter = 0
 			c.Ack(m.DeliveryTag, true) // 批量应答
 		}

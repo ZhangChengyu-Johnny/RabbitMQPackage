@@ -16,6 +16,7 @@ func TestTopicP(t *testing.T) {
 	excahngeName := "topic-mode-exchange-test"
 	durable := false
 	noWait := false
+	expiration := "5000"
 
 	routingKeys := []string{
 		"quick.orange.rabbit",      // 命中Q1 Q2
@@ -31,7 +32,7 @@ func TestTopicP(t *testing.T) {
 	p := PublishMQ.NewTopicPublishMQ(excahngeName, routingKeys, durable, noWait)
 	for _, r := range routingKeys {
 		if routingKey := p.GetRoutingKey(r); routingKey != "" {
-			p.TopicPublish("", routingKey)
+			p.TopicPublish("", expiration, routingKey)
 			time.Sleep(7 * time.Second)
 		}
 	}
@@ -45,6 +46,7 @@ func TestTopicC1(t *testing.T) {
 	prefetchCount := 1
 	durable := false
 	noWait := false
+	openDeadQueue := false
 	c := ConsumeMQ.NewTopicConsumeMQ(
 		excahngeName,
 		queueName,
@@ -52,6 +54,7 @@ func TestTopicC1(t *testing.T) {
 		prefetchCount,
 		durable,
 		noWait,
+		openDeadQueue,
 	)
 	msgChan, err := c.TopicChan()
 	if err != nil {
@@ -74,6 +77,7 @@ func TestTopicC2(t *testing.T) {
 	prefetchCount := 1
 	durable := false
 	noWait := false
+	openDeadQueue := false
 	c := ConsumeMQ.NewTopicConsumeMQ(
 		excahngeName,
 		queueName,
@@ -81,6 +85,7 @@ func TestTopicC2(t *testing.T) {
 		prefetchCount,
 		durable,
 		noWait,
+		openDeadQueue,
 	)
 	msgChan, err := c.TopicChan()
 	if err != nil {
@@ -103,6 +108,7 @@ func TestTopicC3(t *testing.T) {
 	prefetchCount := 1
 	durable := false
 	noWait := false
+	openDeadQueue := false
 	c := ConsumeMQ.NewTopicConsumeMQ(
 		excahngeName,
 		queueName,
@@ -110,6 +116,7 @@ func TestTopicC3(t *testing.T) {
 		prefetchCount,
 		durable,
 		noWait,
+		openDeadQueue,
 	)
 	msgChan, err := c.TopicChan()
 	if err != nil {

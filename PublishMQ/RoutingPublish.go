@@ -19,7 +19,7 @@ type routingPublish struct {
 
 func NewRoutingPublishMQ(exchangeName string, durable, noWait bool) *routingPublish {
 	mq := &routingPublish{
-		basicPublish: newBasicPublishMQ(exchangeName, "routing-publish"),
+		basicPublish: newBasicPublishMQ(exchangeName, "direct-publish"),
 	}
 	mq.exchangeDeclare()
 
@@ -42,7 +42,7 @@ func (mq *routingPublish) exchangeDeclare() {
 
 }
 
-func (mq *routingPublish) DirectPublish(message, routingKey string) error {
+func (mq *routingPublish) DirectPublish(message, routingKey, expiration string) error {
 	if err := mq.channel.PublishWithContext(
 		context.Background(),
 		mq.ExchangeName, // 发到绑定的交换器
@@ -54,7 +54,7 @@ func (mq *routingPublish) DirectPublish(message, routingKey string) error {
 			DeliveryMode: 1,                     // 持久设置，1:临时消息；2:持久化
 			Priority:     0,                     // 消息优先级0~9
 			ReplyTo:      "",                    // address to reply(ex: RPC)
-			Expiration:   "",                    // 消息有效期
+			Expiration:   "",                    // 消息有效期(毫秒)
 			MessageId:    uuid.NewV4().String(), // message identity
 			Timestamp:    time.Now(),            // 发送消息的时间
 			Type:         "",                    // 消息类型

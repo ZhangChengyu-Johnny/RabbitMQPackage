@@ -18,11 +18,12 @@ type confirmPublishMQ struct {
 	Queues        map[string]struct{}    // 工作模式生产者对应多个队列
 	notifyConfirm chan amqp.Confirmation // 接收发布结果的管道
 	MessageMap    sync.Map               // 临时存储发布消息的管道
+	TestCounter   int
 }
 
 func NewConfirmPublishMQ() *confirmPublishMQ {
 	mq := &confirmPublishMQ{
-		basicPublish: newBasicPublishMQ("", "confirm-publish"),
+		basicPublish: newBasicPublishMQ("", "default-publish"),
 		Queues:       make(map[string]struct{}),
 	}
 	// 把notifyConfirm管道加入监听队列
@@ -44,13 +45,13 @@ func NewConfirmPublishMQ() *confirmPublishMQ {
 func (mq *confirmPublishMQ) publishResult(c <-chan amqp.Confirmation) {
 	for confirmRet := range c {
 		if confirmRet.Ack {
-			log.Println("publish message successful. deliveryTag: ", confirmRet.DeliveryTag)
+			mq.TestCounter++
 			mq.MessageMap.Delete(confirmRet.DeliveryTag)
 		} else {
-			msg, _ := mq.MessageMap.Load(confirmRet.DeliveryTag)
-			log.Println("publish message failed. deliveryTag: ", msg)
+			msg, _ := mq.MessageMap.LoadAndDelete(confirmRet.DeliveryTag)
+			log.Println("publish message failed. deliveryTag: ", msg.(map[string]string)["message"])
 			// TODO: 重发消息或持久化
-			// mq.MessageMap.LoadAndDelete(confirmRet.DeliveryTag)
+			mq.DefaultPublish(msg.(map[string]string)["queueName"], msg.(map[string]string)["message"])
 		}
 	}
 }
@@ -89,28 +90,27 @@ func (mq *confirmPublishMQ) DefaultPublish(message, queueName string) error {
 		return err
 	}
 
-	data := &amqp.Publishing{
-		ContentType:  "text/plain",          // 消息内容类型
-		DeliveryMode: 1,                     // 持久设置，1:临时消息；2:持久化
-		Priority:     0,                     // 消息优先级0~9
-		ReplyTo:      "",                    // address to reply(ex: RPC)
-		Expiration:   "",                    // 消息有效期
-		MessageId:    uuid.NewV4().String(), // message identity
-		Timestamp:    time.Now(),            // 发送消息的时间
-		Type:         "",                    // 消息类型
-		UserId:       "",                    // user identity(ex: admin)
-		AppId:        "",                    // app identity
-		Body:         []byte(message),       // 消息内容
-	}
 	// 存储消息，在标记发布成功后删除
-	mq.MessageMap.Store(mq.GetNexPublishSeqNo(), data)
+	mq.MessageMap.Store(mq.GetNexPublishSeqNo(), map[string]string{"message": message, "queueName": queueName})
 	if err := mq.channel.PublishWithContext(
 		context.Background(),
 		"",        // 交换器
 		queueName, // 路由
 		false,     // 开启后把无法找到符合路由的消息返回给生产者
 		false,     // 开启后如果交换机发送的队列上都没有消费者，那么把消息返回给生产者
-		*data,
+		amqp.Publishing{
+			ContentType:  "text/plain",          // 消息内容类型
+			DeliveryMode: 1,                     // 持久设置，1:临时消息；2:持久化
+			Priority:     0,                     // 消息优先级0~9
+			ReplyTo:      "",                    // address to reply(ex: RPC)
+			Expiration:   "",                    // 消息有效期
+			MessageId:    uuid.NewV4().String(), // message identity
+			Timestamp:    time.Now(),            // 发送消息的时间
+			Type:         "",                    // 消息类型
+			UserId:       "",                    // user identity(ex: admin)
+			AppId:        "",                    // app identity
+			Body:         []byte(message),       // 消息内容
+		},
 	); err != nil {
 		mq.failOnError(err, "publish message failed.")
 		return err

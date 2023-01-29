@@ -10,6 +10,7 @@ import (
 )
 
 func TestRoutingP(t *testing.T) {
+	expiration := "5000" // 超时时间
 	p := PublishMQ.NewRoutingPublishMQ("routing-mode-exchange-test", false, false)
 	routingKey := []string{"info", "warning", "error"}
 	for i := 0; i < 1000; i++ {
@@ -19,11 +20,10 @@ func TestRoutingP(t *testing.T) {
 			time.Now().Format("2006-01-02 15:04:05"),
 			i,
 		)
-		if err := p.DirectPublish(msg, routingKey[i%len(routingKey)]); err != nil {
+		if err := p.DirectPublish(msg, routingKey[i%len(routingKey)], expiration); err != nil {
 			log.Println(err)
 			return
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
 	time.Sleep(1 * time.Second)
 
@@ -37,7 +37,7 @@ func TestRoutingC1(t *testing.T) {
 	durable := false
 	noWait := false
 	ackCounter := 0
-
+	openDeadQueue := true
 	c := ConsumeMQ.NewRoutingConsumeMQ(
 		exchangeName,
 		queueName,
@@ -45,6 +45,7 @@ func TestRoutingC1(t *testing.T) {
 		prefetchCount,
 		durable,
 		noWait,
+		openDeadQueue,
 	)
 
 	msgChan, err := c.RoutingChan()
@@ -56,6 +57,7 @@ func TestRoutingC1(t *testing.T) {
 	for msg := range msgChan {
 		ackCounter++
 		fmt.Println(string(msg.Body))
+		time.Sleep(200 * time.Millisecond)
 		if ackCounter >= 100 {
 			c.Ack(msg.DeliveryTag, true)
 			ackCounter = 0
@@ -72,6 +74,7 @@ func TestRoutingC2(t *testing.T) {
 	durable := false
 	noWait := false
 	ackCounter := 0
+	openDeadQueue := true
 
 	c := ConsumeMQ.NewRoutingConsumeMQ(
 		exchangeName,
@@ -80,6 +83,7 @@ func TestRoutingC2(t *testing.T) {
 		prefetchCount,
 		durable,
 		noWait,
+		openDeadQueue,
 	)
 
 	msgChan, err := c.RoutingChan()
@@ -91,6 +95,7 @@ func TestRoutingC2(t *testing.T) {
 	for msg := range msgChan {
 		ackCounter++
 		fmt.Println(string(msg.Body))
+		time.Sleep(200 * time.Millisecond)
 		if ackCounter >= 100 {
 			c.Ack(msg.DeliveryTag, true)
 			ackCounter = 0
@@ -107,7 +112,7 @@ func TestRoutingC3(t *testing.T) {
 	durable := false
 	noWait := false
 	ackCounter := 0
-
+	openDeadQueue := false
 	c := ConsumeMQ.NewRoutingConsumeMQ(
 		exchangeName,
 		queueName,
@@ -115,6 +120,7 @@ func TestRoutingC3(t *testing.T) {
 		prefetchCount,
 		durable,
 		noWait,
+		openDeadQueue,
 	)
 
 	msgChan, err := c.RoutingChan()
@@ -126,6 +132,7 @@ func TestRoutingC3(t *testing.T) {
 	for msg := range msgChan {
 		ackCounter++
 		fmt.Println(string(msg.Body))
+		time.Sleep(200 * time.Millisecond)
 		if ackCounter >= 100 {
 			c.Ack(msg.DeliveryTag, true)
 			ackCounter = 0

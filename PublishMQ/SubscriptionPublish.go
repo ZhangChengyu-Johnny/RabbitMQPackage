@@ -19,7 +19,7 @@ type subscriptionPublish struct {
 
 func NewSubscriptionPublishMQ(exchangeName string, durable, noWait bool) *subscriptionPublish {
 	mq := &subscriptionPublish{
-		basicPublish: newBasicPublishMQ(exchangeName, "subscription-publish"),
+		basicPublish: newBasicPublishMQ(exchangeName, "fanout-publish"),
 		durable:      durable,
 		noWait:       noWait,
 	}
@@ -45,7 +45,7 @@ func (mq *subscriptionPublish) exchangeDeclare() {
 
 }
 
-func (mq *subscriptionPublish) FanoutPublish(message string) error {
+func (mq *subscriptionPublish) FanoutPublish(message, expiration string) error {
 	if err := mq.channel.PublishWithContext(
 		context.Background(),
 		mq.ExchangeName, // 发到绑定的交换器

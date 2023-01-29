@@ -66,7 +66,7 @@ func (mq *topicPublishMQ) GetRoutingKey(rk string) routingKey {
 	}
 }
 
-func (mq *topicPublishMQ) TopicPublish(message string, rk routingKey) error {
+func (mq *topicPublishMQ) TopicPublish(message, expiration string, rk routingKey) error {
 	if err := mq.channel.PublishWithContext(
 		context.Background(),
 		mq.ExchangeName, // 发到绑定的交换器

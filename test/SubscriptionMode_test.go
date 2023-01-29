@@ -10,12 +10,13 @@ import (
 )
 
 func TestSubscriptionP(t *testing.T) {
+	expiration := "5000"
 	p := PublishMQ.NewSubscriptionPublishMQ("subscription-mode-exchange-test", false, false)
 
 	for i := 0; i < 10; i++ {
 		msg := fmt.Sprintf("当前时间:%s, 这是第%d条消息", time.Now().Format("2006-01-02 15:04:05"), i)
 
-		if err := p.FanoutPublish(msg); err != nil {
+		if err := p.FanoutPublish(msg, expiration); err != nil {
 			log.Println(err)
 			return
 		}
@@ -28,7 +29,8 @@ func TestSubscriptionC1(t *testing.T) {
 	prefetchCount := 1 // 按性能转发
 	durable := false
 	noWait := false
-	c := ConsumeMQ.NewSubscriptionConsumeMQ(exChangeName, prefetchCount, durable, noWait)
+	openDeadQueue := false
+	c := ConsumeMQ.NewSubscriptionConsumeMQ(exChangeName, prefetchCount, durable, noWait, openDeadQueue)
 
 	msgChan, err := c.FanoutChan()
 	if err != nil {
@@ -48,7 +50,8 @@ func TestSubscriptionC2(t *testing.T) {
 	durable := false
 	noWait := false
 	ackCounter := 0
-	c := ConsumeMQ.NewSubscriptionConsumeMQ(exChangeName, prefetchCount, durable, noWait)
+	openDeadQueue := false
+	c := ConsumeMQ.NewSubscriptionConsumeMQ(exChangeName, prefetchCount, durable, noWait, openDeadQueue)
 
 	msgChan, err := c.FanoutChan()
 	if err != nil {

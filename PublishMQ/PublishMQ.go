@@ -11,7 +11,7 @@ type basicPublish struct {
 	conn         *amqp.Connection
 	channel      *amqp.Channel
 	dns          string
-	ExchangeName string // 每个生产者对应一个交换机
+	ExchangeName string
 	Role         string
 }
 

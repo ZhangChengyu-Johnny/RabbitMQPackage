@@ -5,25 +5,29 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// 发布订阅模式中每个消费者声明一个fanout类型的交换机和一个(随机名称)的队列，使用空的RoutingKey绑定
-// 交换机会将消息转发到所有绑定的队列
+// 主体模式中每个消费者声明一个topics类型的交换机和一个队列，该队列可以绑定多个RoutingKey
+// 交换机会将消息转发到所有命中匹配规则的队列
 
-type subscriptionConsumeMQ struct {
+type topicConsumeMQ struct {
 	*basicConsume
 	consumeName   string
-	ExchangeName  string // 交换机名称
+	ExchangeName  string
 	QueueName     string
 	queue         amqp.Queue
+	RoutingKeys   []string
 	prefetchCount int
 	durable       bool
 	noWait        bool
 }
 
-func NewSubscriptionConsumeMQ(exchangeName string, prefetchCount int, durable, noWait bool) *subscriptionConsumeMQ {
-	mq := &subscriptionConsumeMQ{
-		basicConsume:  newBasicConsumeMQ("subscription-consume"),
-		consumeName:   "subscription-consume-" + uuid.NewV4().String(),
+func NewTopicConsumeMQ(exchangeName, queueName string, routingKeys []string,
+	prefetchCount int, durable, noWait bool) *topicConsumeMQ {
+	mq := &topicConsumeMQ{
+		basicConsume:  newBasicConsumeMQ("topic-consumer"),
+		consumeName:   "topic-consumer-" + uuid.NewV4().String(),
 		ExchangeName:  exchangeName,
+		QueueName:     queueName,
+		RoutingKeys:   routingKeys,
 		prefetchCount: prefetchCount,
 		durable:       durable,
 		noWait:        noWait,
@@ -35,29 +39,32 @@ func NewSubscriptionConsumeMQ(exchangeName string, prefetchCount int, durable, n
 	// 声明队列
 	mq.queueDeclare()
 
-	// 绑定交换机和队列
-	if err := mq.channel.QueueBind(
-		mq.QueueName,    // 随机队列名
-		"",              // RoutingKey，该模式用空
-		mq.ExchangeName, // 交换机名
-		noWait,          // 阻塞
-		nil,
-	); err != nil {
-		mq.failOnError(err, "queue bind exchange failed.")
-		panic(err)
+	// 用路由绑定交换机
+	for _, r := range routingKeys {
+		if err := mq.channel.QueueBind(
+			mq.QueueName,    // 队列名
+			r,               // topic的路由规则
+			mq.ExchangeName, // 交换机
+			mq.noWait,       // 阻塞
+			nil,             // 其他参数
+		); err != nil {
+			mq.failOnError(err, "queue bind exchange failed.")
+			panic(err)
+		}
 	}
 
 	// 配置消费速率
 	mq.channel.Qos(prefetchCount, 0, false)
 	return mq
+
 }
 
 /* 声明交换机 */
-func (mq *subscriptionConsumeMQ) exchangeDeclare() {
+func (mq *topicConsumeMQ) exchangeDeclare() {
 	if err := mq.channel.ExchangeDeclare(
 		mq.ExchangeName, // 交换机名称
-		"fanout",        // 交换机类型，该模式必须fanout
-		mq.durable,      // 交换机持久化标记
+		"topic",         // 交换机类型，该模式必须topic
+		mq.durable,      // 交换机持久标记
 		false,           // 自动删除
 		false,           // 仅rabbitMQ内部使用
 		mq.noWait,       // 阻塞
@@ -66,14 +73,12 @@ func (mq *subscriptionConsumeMQ) exchangeDeclare() {
 		mq.failOnError(err, "declare exchange failed.")
 		panic(err)
 	}
-
 }
 
-/* 声明队列 */
-func (mq *subscriptionConsumeMQ) queueDeclare() {
+func (mq *topicConsumeMQ) queueDeclare() {
 	var err error
 	mq.queue, err = mq.channel.QueueDeclare(
-		"", // 随机队列名
+		mq.QueueName,
 		mq.durable,
 		false,
 		false,
@@ -84,13 +89,13 @@ func (mq *subscriptionConsumeMQ) queueDeclare() {
 		mq.failOnError(err, "declare queue failed.")
 		panic(err)
 	}
-	mq.QueueName = mq.queue.Name
 }
 
 /* 创建消费者消息管道 */
-func (mq *subscriptionConsumeMQ) FanoutChan() (<-chan amqp.Delivery, error) {
+func (mq *topicConsumeMQ) TopicChan() (<-chan amqp.Delivery, error) {
+	// 接收消息
 	msgChan, err := mq.channel.Consume(
-		mq.queue.Name,  // 队列名称
+		mq.QueueName,   // 队列名称
 		mq.consumeName, // 消费者名称
 		false,          // 自动应答
 		false,          // 独占
@@ -102,5 +107,5 @@ func (mq *subscriptionConsumeMQ) FanoutChan() (<-chan amqp.Delivery, error) {
 		mq.failOnError(err, "make message channel failed.")
 		return nil, err
 	}
-	return msgChan, err
+	return msgChan, nil
 }

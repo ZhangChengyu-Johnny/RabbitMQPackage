@@ -8,28 +8,33 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-type RoutingPublish struct {
+type routingPublish struct {
 	*basicPublish
+	durable bool
+	noWait  bool
 }
 
-func NewRoutingPublishMQ(exchangeName string, durable, noWait bool, args amqp.Table) *RoutingPublish {
-	mq := &RoutingPublish{
+// 路由模式中每个生产者绑定一个direct类型的交换机，向交换机发布消息时需指定RoutingKey
+// 交换机会根据RoutingKey将消息发布到绑定该RoutingKey的队列
+
+func NewRoutingPublishMQ(exchangeName string, durable, noWait bool) *routingPublish {
+	mq := &routingPublish{
 		basicPublish: newBasicPublishMQ(exchangeName, "routing-publish"),
 	}
-	mq.exchangeDeclare(durable, noWait, args)
+	mq.exchangeDeclare()
 
 	return mq
 }
 
-func (mq *RoutingPublish) exchangeDeclare(durable, noWait bool, args amqp.Table) {
+func (mq *routingPublish) exchangeDeclare() {
 	if err := mq.channel.ExchangeDeclare(
 		mq.ExchangeName, // 交换机名称
 		"direct",        // 交换机类型
-		durable,         // 交换机持久化标记
+		mq.durable,      // 交换机持久化标记
 		false,           // 自动删除
 		false,           // 仅rabbitMQ内部使用
-		noWait,          // 阻塞
-		args,            // 额外参数
+		mq.noWait,       // 阻塞
+		nil,             // 额外参数
 	); err != nil {
 		mq.failOnError(err, "declare exchange failed.")
 		panic(err)
@@ -37,7 +42,7 @@ func (mq *RoutingPublish) exchangeDeclare(durable, noWait bool, args amqp.Table)
 
 }
 
-func (mq *RoutingPublish) RoutingPublishMessage(message, routingKey string) error {
+func (mq *routingPublish) DirectPublish(message, routingKey string) error {
 	if err := mq.channel.PublishWithContext(
 		context.Background(),
 		mq.ExchangeName, // 发到绑定的交换器

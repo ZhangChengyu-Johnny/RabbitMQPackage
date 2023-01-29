@@ -2,37 +2,51 @@ package PublishMQ
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	uuid "github.com/satori/go.uuid"
 )
 
-// 发布订阅模式中每个生产者绑定一个fanout类型的交换机，向交换机发送消息时RoutingKey可以为空
-// 交换机会把消息发送给所有绑定的队列
+// 主体模式中每个生产者绑定一个topics类型的交换机，向交换机发送路由时需指定RoutingKey匹配规则
+// 交换机会把消息发送给所有命中匹配规则的队列
 
-type subscriptionPublish struct {
+type routingKey string
+
+type topicPublishMQ struct {
 	*basicPublish
-	durable bool
-	noWait  bool
+	routingKeys map[routingKey]struct{}
+	durable     bool
+	noWait      bool
 }
 
-func NewSubscriptionPublishMQ(exchangeName string, durable, noWait bool) *subscriptionPublish {
-	mq := &subscriptionPublish{
-		basicPublish: newBasicPublishMQ(exchangeName, "subscription-publish"),
+func NewTopicPublishMQ(exchangeName string, routingKeys []string, durable, noWait bool) *topicPublishMQ {
+	mq := &topicPublishMQ{
+		basicPublish: newBasicPublishMQ(exchangeName, "topic-publish"),
+		routingKeys:  make(map[routingKey]struct{}),
 		durable:      durable,
 		noWait:       noWait,
 	}
-	// 发布订阅模式实例化生产者时需要声明交换机
-	mq.exchangeDeclare()
 
+	for _, r := range routingKeys {
+		mq.routingKeys[routingKey(r)] = struct{}{}
+	}
+	if len(mq.routingKeys) == 0 {
+		err := errors.New("RoutingKey is required")
+		mq.failOnError(err, "RoutingKey is required")
+		panic(err)
+	}
+
+	// 声明交换机
+	mq.exchangeDeclare()
 	return mq
 }
 
-func (mq *subscriptionPublish) exchangeDeclare() {
+func (mq *topicPublishMQ) exchangeDeclare() {
 	if err := mq.channel.ExchangeDeclare(
 		mq.ExchangeName, // 交换机名称
-		"fanout",        // 交换机类型
+		"topic",         // 交换机类型
 		mq.durable,      // 交换机持久化标记
 		false,           // 自动删除
 		false,           // 仅rabbitMQ内部使用
@@ -42,14 +56,21 @@ func (mq *subscriptionPublish) exchangeDeclare() {
 		mq.failOnError(err, "declare exchange failed.")
 		panic(err)
 	}
-
 }
 
-func (mq *subscriptionPublish) FanoutPublish(message string) error {
+func (mq *topicPublishMQ) GetRoutingKey(rk string) routingKey {
+	if _, ok := mq.routingKeys[routingKey(rk)]; ok {
+		return routingKey(rk)
+	} else {
+		return ""
+	}
+}
+
+func (mq *topicPublishMQ) TopicPublish(message string, rk routingKey) error {
 	if err := mq.channel.PublishWithContext(
 		context.Background(),
 		mq.ExchangeName, // 发到绑定的交换器
-		"",              // RoutingKey为空，交换机将发给所有绑定的队列
+		string(rk),      // RoutingKey匹配规则
 		false,           // 开启后把无法找到符合路由的消息返回给生产者
 		false,           // 开启后如果交换机发送的队列上都没有消费者，那么把消息返回给生产者
 		amqp.Publishing{

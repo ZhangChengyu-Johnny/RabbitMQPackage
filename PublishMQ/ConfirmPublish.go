@@ -11,25 +11,26 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-type ConfirmPublishMQ struct {
+// 发布确认模式中每个生产者绑定一个default类型的交换机，可以储存多个队列信息，根据队列名将消息发布到指定队列
+
+type confirmPublishMQ struct {
 	*basicPublish
 	Queues        map[string]struct{}    // 工作模式生产者对应多个队列
 	notifyConfirm chan amqp.Confirmation // 接收发布结果的管道
 	MessageMap    sync.Map               // 临时存储发布消息的管道
 }
 
-type RecordMethod func(string)
-
-func NewConfirmPublishMQ() *ConfirmPublishMQ {
-	mq := &ConfirmPublishMQ{
+func NewConfirmPublishMQ() *confirmPublishMQ {
+	mq := &confirmPublishMQ{
 		basicPublish: newBasicPublishMQ("", "confirm-publish"),
 		Queues:       make(map[string]struct{}),
 	}
 	// 把notifyConfirm管道加入监听队列
 	mq.notifyConfirm = mq.channel.NotifyPublish(make(chan amqp.Confirmation, 1))
 	// 监听发布结果的goroutine
-	go mq.GetPublishResult(mq.notifyConfirm)
+	go mq.publishResult(mq.notifyConfirm)
 
+	// 开启发布确认模式
 	if err := mq.channel.Confirm(false); err != nil {
 		mq.failOnError(err, "confirm failed")
 		return nil
@@ -40,7 +41,7 @@ func NewConfirmPublishMQ() *ConfirmPublishMQ {
 }
 
 /* 监听发布结果 */
-func (mq *ConfirmPublishMQ) GetPublishResult(c <-chan amqp.Confirmation) {
+func (mq *confirmPublishMQ) publishResult(c <-chan amqp.Confirmation) {
 	for confirmRet := range c {
 		if confirmRet.Ack {
 			log.Println("publish message successful. deliveryTag: ", confirmRet.DeliveryTag)
@@ -54,8 +55,8 @@ func (mq *ConfirmPublishMQ) GetPublishResult(c <-chan amqp.Confirmation) {
 	}
 }
 
-/* 使用default交换机发布 */
-func (mq *ConfirmPublishMQ) QueueDeclare(queueName string, durable, noWait bool, args amqp.Table) error {
+/* 提供给用户注册多个队列 */
+func (mq *confirmPublishMQ) QueueDeclare(queueName string, durable, noWait bool) error {
 	if _, ok := mq.Queues[queueName]; ok {
 		return nil
 	}
@@ -66,7 +67,7 @@ func (mq *ConfirmPublishMQ) QueueDeclare(queueName string, durable, noWait bool,
 		false,     // 自动删除
 		false,     // 队列独占标记
 		noWait,    // 阻塞
-		args,      // 额外参数
+		nil,       // 额外参数
 	); err != nil {
 		mq.failOnError(err, "declare queue failed.")
 		return err
@@ -77,11 +78,11 @@ func (mq *ConfirmPublishMQ) QueueDeclare(queueName string, durable, noWait bool,
 }
 
 /* 获取下一个信道ID */
-func (mq *ConfirmPublishMQ) GetNexPublishSeqNo() uint64 {
+func (mq *confirmPublishMQ) GetNexPublishSeqNo() uint64 {
 	return mq.channel.GetNextPublishSeqNo()
 }
 
-func (mq *ConfirmPublishMQ) ConfirmPublishMessage(message, queueName string) error {
+func (mq *confirmPublishMQ) DefaultPublish(message, queueName string) error {
 	if _, ok := mq.Queues[queueName]; !ok {
 		err := errors.New("queue not exists")
 		mq.failOnError(err, "queue not exists")

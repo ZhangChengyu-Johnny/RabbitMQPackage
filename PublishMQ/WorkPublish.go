@@ -9,21 +9,22 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-type WorkPublishMQ struct {
+// 工作模式中每个生产者绑定一个default类型的交换机，可以储存多个队列信息，根据队列名将消息发布到指定队列
+
+type workPublishMQ struct {
 	*basicPublish
 	Queues map[string]struct{} // 工作模式生产者对应多个队列
 }
 
-func NewWorkPublishMQ() *WorkPublishMQ {
-	basicMQ := newBasicPublishMQ("", "work-publisher")
-	return &WorkPublishMQ{
-		basicPublish: basicMQ,
+func NewWorkPublishMQ() *workPublishMQ {
+	return &workPublishMQ{
+		basicPublish: newBasicPublishMQ("", "work-publisher"),
 		Queues:       make(map[string]struct{}),
 	}
 }
 
-/* 使用default交换机发布 */
-func (mq *WorkPublishMQ) QueueDeclare(queueName string, durable, noWait bool, args amqp.Table) error {
+/* 提供给用户注册多个队列 */
+func (mq *workPublishMQ) QueueDeclare(queueName string, durable, noWait bool) error {
 	if _, ok := mq.Queues[queueName]; ok {
 		return nil
 	}
@@ -33,17 +34,16 @@ func (mq *WorkPublishMQ) QueueDeclare(queueName string, durable, noWait bool, ar
 		false,     // 自动删除
 		false,     // 队列独占标记
 		noWait,    // 阻塞
-		args,      // 额外参数
+		nil,       // 额外参数
 	); err != nil {
 		mq.failOnError(err, "declare queue failed.")
 		return err
 	}
-
 	mq.Queues[queueName] = struct{}{}
 	return nil
 }
 
-func (mq *WorkPublishMQ) WorkPublishMessage(message, queueName string) error {
+func (mq *workPublishMQ) DefaultPublish(message, queueName string) error {
 	if _, ok := mq.Queues[queueName]; !ok {
 		err := errors.New("queue not exists")
 		mq.failOnError(err, "queue not exists")

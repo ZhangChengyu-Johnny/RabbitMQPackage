@@ -1,8 +1,8 @@
 package test
 
 import (
-	"RabbitMQPackage/ConsumeMQ"
-	"RabbitMQPackage/PublishMQ"
+	"RabbitMQPackage"
+	"context"
 	"fmt"
 	"log"
 	"testing"
@@ -10,53 +10,53 @@ import (
 )
 
 func TestConfirmP(t *testing.T) {
-	queueName := "confirm-mode-test1"
+	mode := RabbitMQPackage.ConfirmMode
+	exchangeName := "confirm-mode-exchange"
+	routingKeys := []string{"confirm-mode-k"}
 	durable := false
 	noWait := false
-	p := PublishMQ.NewConfirmPublishMQ()
-	err := p.QueueDeclare(queueName, durable, noWait)
-	if err != nil {
-		log.Println(err)
-		return
-	}
 
-	for i := 0; i < 100000; i++ {
-		msg := fmt.Sprintf("当前时间:%s, 这是第%d条消息", time.Now().Format("2006-01-02 15:04:05"), i)
-		if err = p.DefaultPublish(msg, queueName); err != nil {
-			log.Println(err)
-			return
-		}
-	}
-	time.Sleep(time.Second * 3)
+	contextType := "text/plain"
+	priorityLevel := 0
+	expiration := 5000
+	confirm := true
 
-	nackCounter := 0
-	p.MessageMap.Range(func(k, v any) bool {
-		nackCounter += 1
+	confirmP := RabbitMQPackage.NewPublishMQ(mode, exchangeName, routingKeys, durable, noWait, confirm)
+
+	for i := 0; i < 3000; i++ {
+		data := fmt.Sprintf("当前时间:%s, 这是第%d条消息", time.Now().Format("2006-01-02 15:04:05"), i)
+		msg := confirmP.CreateMessage(data, contextType, priorityLevel, expiration)
+		confirmP.Publish(msg, routingKeys[0], context.Background())
+	}
+	time.Sleep(3 * time.Second)
+	nackCount := 0
+	confirmP.MessageMap.Range(func(k, v any) bool {
+		nackCount++
 		return true
 	})
-
-	fmt.Println("nack count:", nackCounter)
-	fmt.Println("ack count:", p.TestCounter)
+	fmt.Println("nack count:", nackCount)
+	fmt.Println("ack count:", confirmP.AckCounter)
 }
 
 func TestConfirmC(t *testing.T) {
-	queueName := "confirm-mode-test1"
-	prefetchCount := 100 // 轮询分发
+	mode := RabbitMQPackage.ConfirmMode
+	exchangeName := "confirm-mode-exchange"
+	queueName := "confirm-mode-queue-1"
 	durable := false
 	noWait := false
-	ackCounter := 0 // 消费计数器
-	c := ConsumeMQ.NewWorkConsumeMQ(queueName, prefetchCount, durable, noWait)
-	msgChan, err := c.DefaultChan()
+	routingKeys := []string{"confirm-mode-k"}
+	prefetchCount := 1000
+	deadQueue := true
+
+	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	for msg := range msgChan {
-		ackCounter++
-		fmt.Println(string(msg.Body))
-		c.Ack(msg.DeliveryTag, false)
+	for m := range msgChan {
+		log.Printf("%s get message: %s\n", queueName, string(m.Body))
+		time.Sleep(time.Millisecond * 100)
+		consumer.Ack(m.DeliveryTag, false) // 单条应答
 	}
-
-	fmt.Println("共处理消息:", ackCounter)
 }

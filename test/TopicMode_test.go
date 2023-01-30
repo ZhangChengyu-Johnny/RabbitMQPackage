@@ -1,23 +1,20 @@
 package test
 
 import (
-	"RabbitMQPackage/ConsumeMQ"
-	"RabbitMQPackage/PublishMQ"
+	"RabbitMQPackage"
+	"context"
 	"log"
 	"testing"
 	"time"
 )
 
-// routingKey 1: *.orange.*
-// routingKey 2: *.*.rabbit
-// routingKey 3: lazy.#
+// // routingKey 1: *.orange.*
+// // routingKey 2: *.*.rabbit
+// // routingKey 3: lazy.#
 
 func TestTopicP(t *testing.T) {
-	excahngeName := "topic-mode-exchange-test"
-	durable := false
-	noWait := false
-	expiration := "5000"
-
+	mode := RabbitMQPackage.TopicMode
+	exchangeName := "topic-mode-exchange"
 	routingKeys := []string{
 		"quick.orange.rabbit",      // 命中Q1 Q2
 		"lazy.orange.elephant",     // 命中Q1 Q2
@@ -28,105 +25,67 @@ func TestTopicP(t *testing.T) {
 		"quick.orange.male.rabbit", // 长度为4，都未命中，被丢弃
 		"lazy.orange.male.rabbit",  // 被通配符Q2命中
 	}
+	durable := false
+	noWait := false
 
-	p := PublishMQ.NewTopicPublishMQ(excahngeName, routingKeys, durable, noWait)
+	contextType := "text/plain"
+	priorityLevel := 0
+	expiration := 5000
+	confirm := true
+
+	topicP := RabbitMQPackage.NewPublishMQ(mode, exchangeName, routingKeys, durable, noWait, confirm)
 	for _, r := range routingKeys {
-		if routingKey := p.GetRoutingKey(r); routingKey != "" {
-			p.TopicPublish("", expiration, routingKey)
-			time.Sleep(7 * time.Second)
-		}
+		msg := topicP.CreateMessage(r, contextType, priorityLevel, expiration)
+		topicP.Publish(msg, r, context.Background())
+		time.Sleep(7 * time.Second)
+
 	}
 }
 
-// 队列上1个RoutingKey, 2个消费者
 func TestTopicC1(t *testing.T) {
-	excahngeName := "topic-mode-exchange-test"
-	queueName := "topic-mode-queue-test1"
-	routingKeys := []string{"*.orange.*"}
-	prefetchCount := 1
+	mode := RabbitMQPackage.TopicMode
+	exchangeName := "topic-mode-exchange"
+	queueName := "topic-mode-queue-1"
 	durable := false
 	noWait := false
-	openDeadQueue := false
-	c := ConsumeMQ.NewTopicConsumeMQ(
-		excahngeName,
-		queueName,
-		routingKeys,
-		prefetchCount,
-		durable,
-		noWait,
-		openDeadQueue,
-	)
-	msgChan, err := c.TopicChan()
+	routingKeys := []string{"*.orange.*"}
+	prefetchCount := 100
+	deadQueue := true
+
+	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+
+	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
 	for m := range msgChan {
-		log.Printf("%s 被 %s 命中\n", routingKeys, string(m.RoutingKey))
+		log.Printf("%s get message: %s\n", queueName, string(m.Body))
 		time.Sleep(time.Millisecond * 200)
-		c.Ack(m.DeliveryTag, false) // 单条应答
+		consumer.Ack(m.DeliveryTag, false) // 单条应答
 	}
 }
 
-// 队列上1个RoutingKey, 2个消费者
 func TestTopicC2(t *testing.T) {
-	excahngeName := "topic-mode-exchange-test"
-	queueName := "topic-mode-queue-test1"
-	routingKeys := []string{"*.orange.*"}
-	prefetchCount := 1
+	mode := RabbitMQPackage.TopicMode
+	exchangeName := "topic-mode-exchange"
+	queueName := "topic-mode-queue-2"
 	durable := false
 	noWait := false
-	openDeadQueue := false
-	c := ConsumeMQ.NewTopicConsumeMQ(
-		excahngeName,
-		queueName,
-		routingKeys,
-		prefetchCount,
-		durable,
-		noWait,
-		openDeadQueue,
-	)
-	msgChan, err := c.TopicChan()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	for m := range msgChan {
-		log.Printf("%s 被 %s 命中\n", routingKeys, string(m.RoutingKey))
-		time.Sleep(time.Millisecond * 200)
-		c.Ack(m.DeliveryTag, false) // 单条应答
-	}
-}
-
-// 队列上2个RoutingKey, 1个消费者
-func TestTopicC3(t *testing.T) {
-	excahngeName := "topic-mode-exchange-test"
-	queueName := "topic-mode-queue-test2"
 	routingKeys := []string{"*.*.rabbit", "lazy.#"}
-	prefetchCount := 1
-	durable := false
-	noWait := false
-	openDeadQueue := false
-	c := ConsumeMQ.NewTopicConsumeMQ(
-		excahngeName,
-		queueName,
-		routingKeys,
-		prefetchCount,
-		durable,
-		noWait,
-		openDeadQueue,
-	)
-	msgChan, err := c.TopicChan()
+	prefetchCount := 100
+	deadQueue := true
+
+	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+
+	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
 	for m := range msgChan {
-		log.Printf("%s 被 %s 命中\n", routingKeys, string(m.RoutingKey))
+		log.Printf("%s get message: %s\n", queueName, string(m.Body))
 		time.Sleep(time.Millisecond * 200)
-		c.Ack(m.DeliveryTag, false) // 单条应答
+		consumer.Ack(m.DeliveryTag, false) // 单条应答
 	}
 }

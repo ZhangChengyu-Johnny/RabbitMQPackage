@@ -1,8 +1,8 @@
 package test
 
 import (
-	"RabbitMQPackage/ConsumeMQ"
-	"RabbitMQPackage/PublishMQ"
+	"RabbitMQPackage"
+	"context"
 	"fmt"
 	"log"
 	"testing"
@@ -10,133 +10,90 @@ import (
 )
 
 func TestRoutingP(t *testing.T) {
-	expiration := "5000" // 超时时间
-	p := PublishMQ.NewRoutingPublishMQ("routing-mode-exchange-test", false, false)
-	routingKey := []string{"info", "warning", "error"}
-	for i := 0; i < 1000; i++ {
-		msg := fmt.Sprintf(
-			"RoutingKey: %s, 当前时间:%s, 这是第%d条消息",
-			routingKey[i%len(routingKey)],
-			time.Now().Format("2006-01-02 15:04:05"),
-			i,
-		)
-		if err := p.DirectPublish(msg, routingKey[i%len(routingKey)], expiration); err != nil {
-			log.Println(err)
-			return
-		}
-	}
-	time.Sleep(1 * time.Second)
+	mode := RabbitMQPackage.RoutingMode
+	exchangeName := "routing-mode-exchange"
+	routingKeys := []string{"routing-mode-k1", "routing-mode-k2"}
+	durable := false
+	noWait := false
 
+	contextType := "text/plain"
+	priorityLevel := 0
+	expiration := 5000
+	confirm := false
+
+	workP := RabbitMQPackage.NewPublishMQ(mode, exchangeName, routingKeys, durable, noWait, confirm)
+	for i := 0; i < 3000; i++ {
+		data := fmt.Sprintf("当前时间:%s, 这是第%d条消息", time.Now().Format("2006-01-02 15:04:05"), i)
+		msg := workP.CreateMessage(data, contextType, priorityLevel, expiration)
+		workP.Publish(msg, routingKeys[i%2], context.Background())
+	}
 }
 
 func TestRoutingC1(t *testing.T) {
-	exchangeName := "routing-mode-exchange-test"
-	queueName := "routing-mode-queue-test1"
-	routingKey := "info"
-	prefetchCount := 100
+	mode := RabbitMQPackage.RoutingMode
+	exchangeName := "routing-mode-exchange"
+	queueName := "routing-mode-queue-1"
 	durable := false
 	noWait := false
-	ackCounter := 0
-	openDeadQueue := true
-	c := ConsumeMQ.NewRoutingConsumeMQ(
-		exchangeName,
-		queueName,
-		routingKey,
-		prefetchCount,
-		durable,
-		noWait,
-		openDeadQueue,
-	)
+	routingKeys := []string{"routing-mode-k1"}
+	prefetchCount := 100
+	deadQueue := false
 
-	msgChan, err := c.RoutingChan()
+	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	for msg := range msgChan {
-		ackCounter++
-		fmt.Println(string(msg.Body))
-		time.Sleep(200 * time.Millisecond)
-		if ackCounter >= 100 {
-			c.Ack(msg.DeliveryTag, true)
-			ackCounter = 0
-		}
+	for m := range msgChan {
+		log.Printf("%s get message: %s\n", queueName, string(m.Body))
+		time.Sleep(time.Millisecond * 200)
+		consumer.Ack(m.DeliveryTag, false) // 单条应答
 	}
-
 }
 
 func TestRoutingC2(t *testing.T) {
-	exchangeName := "routing-mode-exchange-test"
-	queueName := "routing-mode-queue-test2"
-	routingKey := "warning"
-	prefetchCount := 100
+	mode := RabbitMQPackage.RoutingMode
+	exchangeName := "routing-mode-exchange"
+	queueName := "routing-mode-queue-1"
 	durable := false
 	noWait := false
-	ackCounter := 0
-	openDeadQueue := true
+	routingKeys := []string{"routing-mode-k1"}
+	prefetchCount := 100
+	deadQueue := false
 
-	c := ConsumeMQ.NewRoutingConsumeMQ(
-		exchangeName,
-		queueName,
-		routingKey,
-		prefetchCount,
-		durable,
-		noWait,
-		openDeadQueue,
-	)
-
-	msgChan, err := c.RoutingChan()
+	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	for msg := range msgChan {
-		ackCounter++
-		fmt.Println(string(msg.Body))
-		time.Sleep(200 * time.Millisecond)
-		if ackCounter >= 100 {
-			c.Ack(msg.DeliveryTag, true)
-			ackCounter = 0
-		}
+	for m := range msgChan {
+		log.Printf("%s get message: %s\n", queueName, string(m.Body))
+		time.Sleep(time.Millisecond * 200)
+		consumer.Ack(m.DeliveryTag, false) // 单条应答
 	}
-
 }
 
 func TestRoutingC3(t *testing.T) {
-	exchangeName := "routing-mode-exchange-test"
-	queueName := "routing-mode-queue-test3"
-	routingKey := "error"
-	prefetchCount := 100
+	mode := RabbitMQPackage.RoutingMode
+	exchangeName := "routing-mode-exchange"
+	queueName := "routing-mode-queue-2"
 	durable := false
 	noWait := false
-	ackCounter := 0
-	openDeadQueue := false
-	c := ConsumeMQ.NewRoutingConsumeMQ(
-		exchangeName,
-		queueName,
-		routingKey,
-		prefetchCount,
-		durable,
-		noWait,
-		openDeadQueue,
-	)
+	routingKeys := []string{"routing-mode-k2"}
+	prefetchCount := 100
+	deadQueue := false
 
-	msgChan, err := c.RoutingChan()
+	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-
-	for msg := range msgChan {
-		ackCounter++
-		fmt.Println(string(msg.Body))
-		time.Sleep(200 * time.Millisecond)
-		if ackCounter >= 100 {
-			c.Ack(msg.DeliveryTag, true)
-			ackCounter = 0
-		}
+	for m := range msgChan {
+		log.Printf("%s get message: %s\n", queueName, string(m.Body))
+		time.Sleep(time.Millisecond * 200)
+		consumer.Ack(m.DeliveryTag, false) // 单条应答
 	}
-
 }

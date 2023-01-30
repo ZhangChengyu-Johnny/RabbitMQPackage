@@ -52,7 +52,7 @@ func TestTopicC1(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := true
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
@@ -76,7 +76,7 @@ func TestTopicC2(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := true
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 
 	msgChan, err := consumer.MessageChan()
 	if err != nil {

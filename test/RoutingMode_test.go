@@ -39,7 +39,7 @@ func TestRoutingC1(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := false
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
@@ -62,7 +62,7 @@ func TestRoutingC2(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := false
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
@@ -85,7 +85,7 @@ func TestRoutingC3(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := false
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)

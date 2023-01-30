@@ -48,7 +48,7 @@ func TestConfirmC(t *testing.T) {
 	prefetchCount := 1000
 	deadQueue := true
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)

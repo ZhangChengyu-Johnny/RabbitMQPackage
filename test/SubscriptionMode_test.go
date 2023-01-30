@@ -39,7 +39,7 @@ func TestSubscriptionC1(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := false
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
@@ -64,7 +64,7 @@ func TestSubscriptionC2(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := false
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
@@ -89,7 +89,7 @@ func TestSubscriptionC3(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := false
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 
 	msgChan, err := consumer.MessageChan()
 	if err != nil {

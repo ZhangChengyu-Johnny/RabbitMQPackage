@@ -39,7 +39,7 @@ func TestWorkC1(t *testing.T) {
 	prefetchCount := 100
 	deadQueue := true
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)
@@ -54,15 +54,15 @@ func TestWorkC1(t *testing.T) {
 
 func TestWorkC2(t *testing.T) {
 	mode := RabbitMQPackage.WorkMode
-	exchangeName := "work-mode-exchange"
-	queueName := "work-mode-queue-1"
-	durable := false
+	exchangeName := "work-mode-exchange-dq-exchange"
+	queueName := "work-mode-queue-1-dq-queue"
+	durable := true
 	noWait := false
-	routingKeys := []string{"work-mode-k1"}
+	routingKeys := []string{"work-mode-k1-dq-queue"}
 	prefetchCount := 100
-	deadQueue := true
+	deadQueue := false
 
-	consumer := RabbitMQPackage.NewConsumMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	consumer := RabbitMQPackage.NewConsumeMQ(mode, exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	msgChan, err := consumer.MessageChan()
 	if err != nil {
 		log.Println(err)

@@ -63,7 +63,7 @@ func newBasicConsumeMQ(exchangeType, exchangeName, queueName string, routingKeys
 		mq.DeadRoutingKey = mq.QueueName + "-dq-routing"
 		mq.DeadQueueName = mq.QueueName + "-dq-queue"
 		// 声明死信交换机
-		mq.exchangeDeclare(mq.DeadExchangeName, "direct", mq.durable, mq.noWait)
+		mq.exchangeDeclare(mq.DeadExchangeName, "direct", true, mq.noWait)
 		// 声明死信队列
 		mq.queueDeclare(mq.DeadQueueName, true, false, nil)
 		// 绑定死信队列和交换机
@@ -75,7 +75,7 @@ func newBasicConsumeMQ(exchangeType, exchangeName, queueName string, routingKeys
 		deadQueueConf["x-dead-letter-exchange"] = mq.DeadExchangeName
 		// deadQueue的RoutingKey
 		deadQueueConf["x-dead-letter-routing-key"] = mq.DeadRoutingKey
-		// 配置死信过期时间(一般不用)
+		// 配置队列过期时间(TTL队列时使用)
 		// deadQueueConf["x-message-ttl"] = 1000000
 	}
 
@@ -111,7 +111,7 @@ func newBasicConsumeMQ(exchangeType, exchangeName, queueName string, routingKeys
 }
 
 /* 工厂模式实例化 */
-func NewConsumMQ(mode Mode, exchangeName, queueName string, routingKeys []string, durable, noWait bool, prefetchCount int, deadQueue bool) *basicConsume {
+func NewConsumeMQ(mode Mode, exchangeName, queueName string, routingKeys []string, durable, noWait bool, prefetchCount int, deadQueue bool) *basicConsume {
 	switch mode {
 	case SimpleMode, WorkMode, ConfirmMode, RoutingMode:
 		return newBasicConsumeMQ("direct", exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)

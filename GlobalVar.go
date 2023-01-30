@@ -18,4 +18,5 @@ var (
 	RoutingMode      Mode = "routing"
 	SubscriptionMode Mode = "subscription"
 	TopicMode        Mode = "topic"
+	TTLMode          Mode = "ttl"
 )

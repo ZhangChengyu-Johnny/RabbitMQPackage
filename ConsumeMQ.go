@@ -117,6 +117,9 @@ func NewConsumeMQ(mode Mode, exchangeName, queueName string, routingKeys []strin
 		return newBasicConsumeMQ("direct", exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	case SubscriptionMode:
 		return newBasicConsumeMQ("fanout", exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
+	case TTLMode:
+		// 需安装插件才可以使用该类型交换机
+		return newBasicConsumeMQ("x-delayed-message", exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	case TopicMode:
 		return newBasicConsumeMQ("topic", exchangeName, queueName, routingKeys, durable, noWait, prefetchCount, deadQueue)
 	default:
